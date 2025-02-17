@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ebase Technology Ltd, 2025.
 
 # Checks the existence of the second parameter.
 # If it doesn't exist the first parameter is printed and the script is exited.
@@ -10,22 +11,36 @@ function assertSet #(String: failure_message, <variable to check> )
     fi
 }
 
-# Adds the given string representation of a path if a parent directory has not been added.
-#   If using to filter sub directories from a directory listing then that listing should be sorted alphabetically first.
-function addIfParentDirectoryNotPresent #(to_add: string, delimiter: char, added:list)
+
+# Adds the given string representation of a path to a array if that array doesn't already contain its parent path.
+#   For example, it will add a/b/c to the list if a or a/b is not already present.
+#
+# This works for parent/child strings like a/b and 1.1, although they can't be mixed.
+#
+# Sorting lists of paths to add prior to using this method is essential.
+#
+# Parameters:
+#   to_add - the string to add, of the form a/b/c or 1.2.3. Spaces between the separators are fine, e.g. a b/c d/f.
+#   separator - the separator in the to_add string to use to split it up.
+#   added - to_add will be added to this array if its parent path is not already present. 
+#
+# Returns:
+#   0 - if to_add was not added.
+#   1 - if to_add was added.
+function addIfParentDirectoryNotPresent #(to_add: string, separator: char, added:array)
 {
     local to_add="$1"
-    local delimiter="$2"
+    local separator="$2"
     local -n added="$3"
     assertSet "addIfParentDirectoryNotPresent::to_add parameter not provided." "$to_add"
-    assertSet "addIfParentDirectoryNotPresent::delimiter parameter not provided." "$delimiter"
+    assertSet "addIfParentDirectoryNotPresent::separator parameter not provided." "$separator"
 
     # if the added list is empty, then add the dir to it.
     if [ ${#added[@]} -eq 0 ]; then
         added+=("$to_add")
     else # otherwise check that a parent dir has not already been added.
         for added_dir in "${added[@]}"; do
-            if [[ "$to_add" == "$added_dir$delimiter"* ]]; then
+            if [[ "$to_add" == "$added_dir$separator"* ]]; then
                 return 0 # a parent directory is present.
             fi
         done
@@ -37,20 +52,35 @@ function addIfParentDirectoryNotPresent #(to_add: string, delimiter: char, added
     return 1 # the given dir was added.
 }
 
-function addEmptyFileToAllEmptySubdirectories #(start_dir:path, add_file_name:string)
+
+# Adds empty files of the specified name to every empty directory under a root directory. 
+#
+# Parameters:
+#   root_dir - path to the starting directory.
+#   add_file_name - the name of the empty file to be created.
+function addEmptyFileToAllEmptySubdirectories #(root_dir:path, add_file_name:string)
 {
-    local start_dir="$1"
+    local root_dir="$1"
     local add_file_name="$2"
-    assertSet "addEmptyFileToAllEmptySubdirectories:: starting directory not provided." "$start_dir"
+    assertSet "addEmptyFileToAllEmptySubdirectories:: root directory not provided." "$root_dir"
     assertSet "addEmptyFileToAllEmptySubdirectories:: name of file to add not provided." "$add_file_name"
 
-    find "$start_dir" -type d -empty | while read -r sub_dir; do
+    find "$root_dir" -type d -empty | while read -r sub_dir; do
         local add_file="$sub_dir/$add_file_name"
         printf "Adding file: $add_file\n"
         touch "$add_file"
     done
 }
 
+# Looks for all structure files (e.g. .gitkeepstructure) under a root directory and for each file found adds an empty file to
+#   every empty subdirectory under each of the found structure files' owing directory.
+#
+# This can be use to preserve an otherwise empty directory structure in git.
+#
+# Parameters:
+#   root_dir - path to the starting directory.
+#   structure_file_name - the name of the structure files.
+#   add_file_name - the name of the empty file to be created.
 function maintainFileStructureForGitRepositories #(root_dir:path, structure_file_name:string, add_file_name:string)
 {
     local root_dir="$1"
@@ -67,7 +97,20 @@ function maintainFileStructureForGitRepositories #(root_dir:path, structure_file
     done
 }
 
-function maintainFileStructureForGitRepositories_filtered #(root_folder:path, add_file_name:string)
+
+# Looks for all structure files (e.g. .gitkeepstructure) under a root directory and for each file found adds an empty file to
+#   every empty subdirectory under each of the found structure files' owing directory.
+#
+# This can be use to preserve an otherwise empty directory structure in git.
+#
+# This version filters out structure files in subdirectories of other structure files (as their empty sub directories will already be processed).
+#   So, depending on your project this may be more efficient. Generally though its probably better to go for the simpler version of this method.
+#
+# Parameters:
+#   root_dir - path to the starting directory.
+#   structure_file_name - the name of the structure files.
+#   add_file_name - the name of the empty file to be created.
+function maintainFileStructureForGitRepositories_filtered #(root_dir:path, structure_file_name:string, add_file_name:string)
 {
     local root_dir="$1"
     local structure_file_name="$2"
@@ -98,4 +141,21 @@ function maintainFileStructureForGitRepositories_filtered #(root_folder:path, ad
     for filtered_dir in "${filtered_dirs[@]}"; do
         addEmptyFileToAllEmptySubdirectories "$filtered_dir" "$add_file_name"
     done
+}
+
+
+# Removes all files of the given name under they specified directory.
+# Use with caution.
+#
+# Parameters:
+#   root_dir - path to the starting directory.
+#   remove_file_name - the name of the file to be removed.
+function removeKeepFiles #(root_dir:path, remove_file_name:string)
+{
+    local root_dir="$1"
+    local remove_file_name="$2"
+    assertSet "removeKeepFiles:: root directory not provided." "$root_dir"
+    assertSet "removeKeepFiles:: name of the file to generate in empty subdirectories under every structure file not provided." "$remove_file_name"
+
+    find "$root_dir" -type f -name "$remove_file_name" -delete
 }
