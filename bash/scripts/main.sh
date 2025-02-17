@@ -145,16 +145,16 @@ function command_addKeepFiles #(root_dir:path, structure_file_name:string, keep_
 
 function command_removeKeepFiles #(root_dir:path, structure_file_name:string, keep_file:string)
 {
-        local root_dir="$1"
-        local keep_file="$2"
-        assertSet "removeKeepFiles:: root directory not provided. Usage: removeKeepFiles --root-dir <dir> [--keep-file <filename>]." "$root_dir"
-        assertSet "removeKeepFiles:: name of the keep file not provided. Usage: removeKeepFiles --root-dir <dir> [--keep-file <filename>]." "$keep_file"
+    local root_dir="$1"
+    local keep_file="$2"
+    assertSet "removeKeepFiles:: root directory not provided. Usage: removeKeepFiles --root-dir <dir> [--keep-file <filename>]." "$root_dir"
+    assertSet "removeKeepFiles:: name of the keep file not provided. Usage: removeKeepFiles --root-dir <dir> [--keep-file <filename>]." "$keep_file"
 
-        printf "Running removeKeepFiles -r=$root_dir -k=$keep_file ...\n"
-        removeKeepFiles "$root_dir" "$keep_file"
-        printf "...done.\n"
-    }
+    printf "Running removeKeepFiles -r=$root_dir -k=$keep_file ...\n"
+    removeKeepFiles "$root_dir" "$keep_file"
+    printf "...done.\n"
+}
 
 
-    parseOptions $*
-    runCommand $*
+parseOptions $*
+runCommand $*
